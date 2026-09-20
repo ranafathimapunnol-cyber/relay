@@ -1,0 +1,42 @@
+# =========================
+# Python / FastAPI
+# =========================
+backend/.venv/
+backend/__pycache__/
+backend/**/__pycache__/
+backend/*.pyc
+backend/**/*.pyc
+backend/.pytest_cache/
+backend/.coverage
+backend/htmlcov/
+
+# Environment variables
+backend/.env
+backend/.env.*
+
+# =========================
+# Next.js
+# =========================
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+
+# Environment variables
+frontend/.env.local
+frontend/.env.*.local
+
+# =========================
+# IDE
+# =========================
+.vscode/
+.idea/
+
+# =========================
+# macOS
+# =========================
+.DS_Store
+
+# =========================
+# Logs
+# =========================
+*.log
