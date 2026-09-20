@@ -1,0 +1,6 @@
+"use client";
+import { useEffect,useState } from "react";
+import AppShell from "@/components/AppShell";
+import { apiFetch } from "@/lib/api";
+type T={id:number;title:string;status:string;priority:string;project_id:number;created_by:number};
+export default function AdminTasks(){const [data,setData]=useState<T[]>([]);const [error,setError]=useState("");useEffect(()=>{apiFetch<T[]>("/api/admin/tasks").then(setData).catch(e=>setError(e.message))},[]);return <AppShell title="Admin Tasks" subtitle="All tasks across the workspace."><div className="card rounded-[28px] overflow-x-auto p-5">{error&&<p className="text-red-800 text-xs">{error}</p>}<table className="w-full min-w-[760px] text-left text-sm"><thead><tr className="text-xs text-[#806d60]"><th className="p-3">ID</th><th className="p-3">Task</th><th className="p-3">Status</th><th className="p-3">Priority</th><th className="p-3">Project</th><th className="p-3">Creator</th></tr></thead><tbody>{data.map(t=><tr key={t.id} className="table-row"><td className="p-3">{t.id}</td><td className="p-3 font-semibold">{t.title}</td><td className="p-3"><span className="pill bg-white/35">{t.status}</span></td><td className="p-3">{t.priority}</td><td className="p-3">{t.project_id}</td><td className="p-3">{t.created_by}</td></tr>)}</tbody></table></div></AppShell>}

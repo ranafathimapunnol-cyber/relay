@@ -1,0 +1,6 @@
+"use client";
+import { useEffect,useState } from "react";
+import AppShell from "@/components/AppShell";
+import { apiFetch } from "@/lib/api";
+type U={id:number;name:string;email:string;role:string}; type P={id:number}; type T={id:number;status:string};
+export default function Admin(){const [u,setU]=useState<U[]>([]);const [p,setP]=useState<P[]>([]);const [t,setT]=useState<T[]>([]);const [err,setErr]=useState("");useEffect(()=>{Promise.all([apiFetch<U[]>("/api/admin/users"),apiFetch<P[]>("/api/admin/projects"),apiFetch<T[]>("/api/admin/tasks")]).then(([a,b,c])=>{setU(a);setP(b);setT(c)}).catch(e=>setErr(e.message))},[]);const done=t.filter(x=>x.status==="COMPLETED").length;return <AppShell title="Admin Overview" subtitle="Workspace administration and system data.">{err?<div className="card rounded-2xl p-5 text-sm text-red-800">{err}</div>:<div className="grid gap-4 md:grid-cols-3"><div className="card rounded-[26px] p-6"><p className="text-xs text-[#806d60]">Users</p><p className="serif mt-2 text-5xl">{u.length}</p></div><div className="card rounded-[26px] p-6"><p className="text-xs text-[#806d60]">Projects</p><p className="serif mt-2 text-5xl">{p.length}</p></div><div className="card rounded-[26px] p-6"><p className="text-xs text-[#806d60]">Completed tasks</p><p className="serif mt-2 text-5xl">{done}</p></div></div>}</AppShell>}

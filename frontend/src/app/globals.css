@@ -1,26 +1,172 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #ead7c2;
+  --foreground: #503426;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+* {
+  box-sizing: border-box;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  min-height: 100%;
 }
 
 body {
-  background: var(--background);
+  margin: 0;
+  min-height: 100vh;
+  background: #ead7c2;
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+.serif {
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+.app-bg {
+  min-height: 100vh;
+  background:
+    linear-gradient(
+      135deg,
+      rgba(246, 230, 210, 0.029),
+      rgba(214, 177, 141, 0)
+    ),
+    url("/desert-bg.png") center / cover fixed;
+}
+
+.landing-bg {
+  min-height: 100vh;
+  background:
+    linear-gradient(
+      120deg,
+      #1b150700,
+      rgba(0, 0, 0, 0.174),
+      rgba(144, 73, 11, 0)
+    ),
+    url("/desert-bg.png") center / cover fixed;
+}
+
+.auth-bg {
+  min-height: 100vh;
+  background:
+    linear-gradient(
+      135deg,
+      rgba(60, 37, 27, 0.072),
+      rgba(129, 79, 49, 0.38),
+      rgba(238, 214, 188, 0.3)
+    ),
+    url("/desert-bg.png") center / cover fixed;
+}
+
+.card {
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  background: rgba(255, 248, 238, 0.47);
+  box-shadow:
+    0 16px 45px rgba(91, 59, 40, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.soft {
+  border: 1px solid rgba(111, 75, 56, 0.08);
+  background: rgba(255, 250, 243, 0.4);
+  transition:
+    transform 180ms ease,
+    background 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.soft:hover {
+  transform: translateY(-1px);
+  background: rgba(255, 250, 243, 0.65);
+  box-shadow: 0 10px 28px rgba(91, 59, 40, 0.07);
+}
+
+.progress {
+  height: 7px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(105, 69, 48, 0.1);
+}
+
+.progress span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #70472f, #d19a6c);
+}
+
+.pill {
+  border-radius: 999px;
+  padding: 5px 9px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.stat {
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.stat:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 30px rgba(91, 59, 40, 0.08);
+}
+
+.quick-action {
+  transition:
+    transform 180ms ease,
+    background 180ms ease;
+}
+
+.quick-action:hover {
+  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.rise {
+  animation: rise 450ms ease both;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+::selection {
+  background: rgba(112, 71, 47, 0.2);
+}
+
+@media (max-width: 1023px) {
+  .app-bg {
+    background-attachment: scroll;
+  }
+
+  .landing-bg,
+  .auth-bg {
+    background-attachment: scroll;
+  }
 }
