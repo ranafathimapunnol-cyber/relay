@@ -1,502 +1,362 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import {
-  Eye,
-  EyeOff,
-  ArrowRight,
-  LockKeyhole,
+  Plus,
+  Trash2,
+  Pencil,
+  FolderKanban,
 } from "lucide-react";
 
-import Link from "next/link";
-
-import {
-  useEffect,
-  useState,
-} from "react";
-
-import { useRouter } from "next/navigation";
-
+import AppShell from "@/components/AppShell";
 import { apiFetch } from "@/lib/api";
 
-
-type User = {
+type Project = {
   id: number;
   name: string;
-  email: string;
-  role: string;
+  description: string | null;
+  owner_id: number;
+  created_at: string;
+  updated_at: string;
 };
 
-
-type LoginResponse = {
-  access_token: string;
-  token_type: string;
+type Task = {
+  id: number;
+  title: string;
+  status: string;
+  priority: string;
+  project_id: number;
 };
 
+export default function Projects() {
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [editing, setEditing] = useState<number | null>(null);
+  const [error, setError] = useState("");
 
-export default function LoginPage() {
+  async function load() {
+    try {
+      const [p, t] = await Promise.all([
+        apiFetch<Project[]>("/api/projects/"),
+        apiFetch<Task[]>("/api/tasks/?page=1&limit=100"),
+      ]);
 
-  const router = useRouter();
+      setProjects(p);
+      setTasks(t);
+    } catch (e: any) {
+      setError(e.message);
+    }
+  }
 
+  useEffect(() => {
+    load();
+  }, []);
 
-  const [email, setEmail] =
-    useState("");
+  async function save() {
+    if (!name.trim()) return;
 
-  const [password, setPassword] =
-    useState("");
+    try {
+      if (editing) {
+        await apiFetch(`/api/projects/${editing}`, {
+          method: "PATCH",
+          body: JSON.stringify({
+            name,
+            description,
+          }),
+        });
+      } else {
+        await apiFetch("/api/projects/", {
+          method: "POST",
+          body: JSON.stringify({
+            name,
+            description,
+          }),
+        });
+      }
 
-  const [showPassword, setShowPassword] =
-    useState(false);
+      setName("");
+      setDescription("");
+      setEditing(null);
+      load();
+    } catch (e: any) {
+      setError(e.message);
+    }
+  }
 
-  const [loading, setLoading] =
-    useState(false);
-
-  const [error, setError] =
-    useState("");
-
-
-  // ====================================================
-  // CHECK EXISTING LOGIN
-  // ====================================================
-
-  async function checkExistingLogin() {
-
-    const token =
-      localStorage.getItem(
-        "access_token"
-      );
-
-
-    /*
-     * No token means this is a normal
-     * login page.
-     */
-    if (!token) {
+  async function remove(id: number) {
+    if (
+      !confirm(
+        "Delete this project? Its tasks will also be deleted."
+      )
+    )
       return;
-    }
-
 
     try {
+      await apiFetch(`/api/projects/${id}`, {
+        method: "DELETE",
+      });
 
-      const user =
-        await apiFetch<User>(
-          "/api/auth/me"
-        );
-
-
-      /*
-       * Token is valid.
-       *
-       * Do NOT allow authenticated user
-       * to stay on login page.
-       */
-      if (user.role === "ADMIN") {
-
-        router.replace("/admin");
-
-      } else {
-
-        router.replace("/dashboard");
-
-      }
-
-    } catch {
-
-      /*
-       * Token is invalid/expired.
-       */
-      localStorage.removeItem(
-        "access_token"
-      );
-
+      load();
+    } catch (e: any) {
+      setError(e.message);
     }
-
   }
-
-
-  // ====================================================
-  // INITIAL CHECK
-  // ====================================================
-
-  useEffect(() => {
-
-    checkExistingLogin();
-
-  }, []);
-
-
-  // ====================================================
-  // BACK/FORWARD CACHE PROTECTION
-  // ====================================================
-
-  useEffect(() => {
-
-    function handlePageShow() {
-
-      checkExistingLogin();
-
-    }
-
-
-    function handlePopState() {
-
-      checkExistingLogin();
-
-    }
-
-
-    window.addEventListener(
-      "pageshow",
-      handlePageShow
-    );
-
-    window.addEventListener(
-      "popstate",
-      handlePopState
-    );
-
-
-    return () => {
-
-      window.removeEventListener(
-        "pageshow",
-        handlePageShow
-      );
-
-      window.removeEventListener(
-        "popstate",
-        handlePopState
-      );
-
-    };
-
-  }, []);
-
-
-  // ====================================================
-  // LOGIN
-  // ====================================================
-
-  async function handleSubmit(
-    event: React.FormEvent<HTMLFormElement>
-  ) {
-
-    event.preventDefault();
-
-    setError("");
-    setLoading(true);
-
-
-    try {
-
-      const result =
-        await apiFetch<LoginResponse>(
-          "/api/auth/login",
-          {
-            method: "POST",
-
-            body: JSON.stringify({
-              email,
-              password,
-            }),
-          }
-        );
-
-
-      /*
-       * Store JWT.
-       */
-      localStorage.setItem(
-        "access_token",
-        result.access_token
-      );
-
-
-      /*
-       * Get current user.
-       */
-      const user =
-        await apiFetch<User>(
-          "/api/auth/me"
-        );
-
-
-      /*
-       * REPLACE is important.
-       *
-       * Login page will not remain as a
-       * separate authenticated history entry.
-       */
-      if (user.role === "ADMIN") {
-
-        router.replace("/admin");
-
-      } else {
-
-        router.replace("/dashboard");
-
-      }
-
-    } catch (err) {
-
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Invalid email or password"
-      );
-
-
-      localStorage.removeItem(
-        "access_token"
-      );
-
-    } finally {
-
-      setLoading(false);
-
-    }
-
-  }
-
-
-  // ====================================================
-  // UI
-  // ====================================================
 
   return (
-    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#1c120d] px-5 py-10">
+    <AppShell
+      title="Projects"
+      subtitle="Create, organize and track your work."
+    >
+      <div className="grid gap-5 xl:grid-cols-[340px_1fr]">
 
-      <div
-        className="absolute inset-0 bg-cover bg-center"
-        style={{
-          backgroundImage:
-            "url('/desert-bg.png')",
-        }}
-      />
+        {/* CREATE / EDIT PROJECT */}
+        <div className="card h-fit rounded-[28px] p-6">
 
-      <div className="absolute inset-0 bg-black/35" />
-
-      <div className="absolute inset-0 bg-gradient-to-br from-[#24150e]/40 via-transparent to-[#120b08]/65" />
-
-      <div className="absolute left-1/2 top-1/2 h-[500px] w-[500px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#d2a77d]/10 blur-[120px]" />
-
-
-      {/* NAVBAR */}
-
-      <header className="absolute inset-x-0 top-0 z-30">
-
-        <div className="mx-auto flex max-w-[1400px] items-center justify-between px-6 py-6 lg:px-10">
-
-          <Link
-            href="/"
-            className="group flex items-center gap-2 text-white"
-          >
-
-            <span className="serif text-2xl font-semibold tracking-tight">
-              Relay
-            </span>
-
-            <span className="h-1.5 w-1.5 rounded-full bg-[#e5bd96] transition group-hover:scale-125" />
-
-          </Link>
-
-
-          <Link
-            href="/register"
-            className="rounded-full border border-white/20 bg-white/10 px-4 py-2 text-xs font-medium text-white/85 backdrop-blur-md transition hover:bg-white/15 hover:text-white"
-          >
-            Create account
-          </Link>
-
-        </div>
-
-      </header>
-
-
-      {/* LOGIN */}
-
-      <div className="relative z-20 w-full max-w-[430px]">
-
-        <div className="mb-6 text-center text-white">
-
-          <p className="mb-3 text-[10px] font-medium uppercase tracking-[0.3em] text-white/55">
-            Welcome back
-          </p>
-
-          <h1 className="serif text-3xl tracking-tight sm:text-4xl">
-            Sign in to Relay
-          </h1>
-
-          <p className="mx-auto mt-2 max-w-xs text-sm leading-6 text-white/60">
-            Continue to your workspace and keep your work moving.
-          </p>
-
-        </div>
-
-
-        <div className="rounded-[30px] border border-white/20 bg-[#f5e9dc]/90 p-6 shadow-[0_25px_80px_rgba(0,0,0,0.35)] backdrop-blur-2xl sm:p-8">
-
-          <div className="mb-7 flex items-center gap-4">
-
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#60402d] text-white shadow-lg">
-              <LockKeyhole size={19} />
+          <div className="mb-5 flex items-center gap-3">
+            <div className="brand-mark">
+              <Plus size={20} />
             </div>
 
             <div>
-
-              <h2 className="text-base font-semibold text-[#4f3425]">
-                Your workspace
+              <h2 className="font-semibold text-[#3d281d]">
+                {editing ? "Edit project" : "New project"}
               </h2>
 
-              <p className="mt-0.5 text-xs text-[#907969]">
-                Enter your details to continue
+              <p className="text-xs text-[#62483a]">
+                Saved directly to PostgreSQL
               </p>
-
             </div>
-
           </div>
 
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Project name"
+            className="
+              glass mb-3 w-full rounded-2xl px-4 py-3
+              text-sm text-[#3d281d]
+              placeholder:text-[#80685a]
+              outline-none
+              focus:border-[#79533c]
+            "
+          />
+
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Description"
+            rows={5}
+            className="
+              glass w-full resize-none rounded-2xl px-4 py-3
+              text-sm text-[#3d281d]
+              placeholder:text-[#80685a]
+              outline-none
+              focus:border-[#79533c]
+            "
+          />
 
           {error && (
-            <div className="mb-5 rounded-2xl border border-red-200/80 bg-red-50/80 px-4 py-3 text-sm text-red-700">
+            <p className="mt-3 text-xs font-medium text-red-800">
               {error}
+            </p>
+          )}
+
+          <div className="mt-4 flex gap-2">
+            <button
+              onClick={save}
+              className="
+                flex-1 rounded-2xl
+                bg-[#4b3022]
+                py-3
+                text-sm font-semibold
+                text-white
+                shadow-md
+                transition
+                hover:bg-[#392318]
+              "
+            >
+              {editing ? "Update" : "Create"}
+            </button>
+
+            {editing && (
+              <button
+                onClick={() => {
+                  setEditing(null);
+                  setName("");
+                  setDescription("");
+                }}
+                className="
+                  rounded-2xl
+                  bg-white/45
+                  px-4
+                  text-sm font-medium
+                  text-[#4b3022]
+                  transition
+                  hover:bg-white/65
+                "
+              >
+                Cancel
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* PROJECTS */}
+        <div className="grid gap-4 md:grid-cols-2">
+
+          {projects.map((p) => {
+            const ts = tasks.filter(
+              (t) => t.project_id === p.id
+            );
+
+            const done = ts.filter(
+              (t) => t.status === "COMPLETED"
+            ).length;
+
+            const percent = ts.length
+              ? Math.round((done / ts.length) * 100)
+              : 0;
+
+            return (
+              <div
+                key={p.id}
+                className="
+                  card rounded-[26px] p-5
+                  text-[#3d281d]
+                  transition duration-200
+                  hover:-translate-y-1
+                  hover:shadow-xl
+                "
+              >
+
+                {/* TOP */}
+                <div className="flex items-start justify-between">
+
+                  <div
+                    className="
+                      flex h-11 w-11
+                      items-center justify-center
+                      rounded-xl
+                      bg-[#62402d]
+                      text-white
+                      shadow-sm
+                    "
+                  >
+                    <FolderKanban size={18} />
+                  </div>
+
+                  <div className="flex gap-1">
+
+                    <button
+                      onClick={() => {
+                        setEditing(p.id);
+                        setName(p.name);
+                        setDescription(p.description || "");
+                      }}
+                      className="
+                        rounded-xl p-2
+                        text-[#4f3628]
+                        transition
+                        hover:bg-white/50
+                      "
+                    >
+                      <Pencil size={15} />
+                    </button>
+
+                    <button
+                      onClick={() => remove(p.id)}
+                      className="
+                        rounded-xl p-2
+                        text-red-800
+                        transition
+                        hover:bg-white/50
+                      "
+                    >
+                      <Trash2 size={15} />
+                    </button>
+
+                  </div>
+                </div>
+
+                {/* PROJECT INFO */}
+                <h3 className="mt-5 text-lg font-bold text-[#3b261b]">
+                  {p.name}
+                </h3>
+
+                <p
+                  className="
+                    mt-1 min-h-10
+                    text-xs leading-5
+                    text-[#62483a]
+                  "
+                >
+                  {p.description || "No description"}
+                </p>
+
+                {/* PROGRESS INFO */}
+                <div
+                  className="
+                    mt-5 flex justify-between
+                    text-[11px] font-semibold
+                    text-[#4f3628]
+                  "
+                >
+                  <span>
+                    {ts.length} {ts.length === 1 ? "task" : "tasks"}
+                  </span>
+
+                  <span className="text-[#60402d]">
+                    {percent}% complete
+                  </span>
+                </div>
+
+                {/* PROGRESS BAR */}
+                <div
+                  className="
+                    mt-2 h-2
+                    overflow-hidden
+                    rounded-full
+                    bg-[#cbb8a2]/45
+                  "
+                >
+                  <span
+                    className="
+                      block h-full
+                      rounded-full
+                      bg-[#60402d]
+                      transition-all duration-500
+                    "
+                    style={{
+                      width: `${percent}%`,
+                    }}
+                  />
+                </div>
+
+              </div>
+            );
+          })}
+
+          {/* EMPTY STATE */}
+          {projects.length === 0 && (
+            <div
+              className="
+                card col-span-full
+                flex min-h-72
+                items-center justify-center
+                rounded-[28px]
+                text-sm
+                font-medium
+                text-[#62483a]
+              "
+            >
+              No projects yet. Create one.
             </div>
           )}
 
-
-          <form
-            onSubmit={handleSubmit}
-            className="space-y-5"
-          >
-
-            <div>
-
-              <label className="mb-2 block text-[11px] font-semibold uppercase tracking-wide text-[#705444]">
-                Email address
-              </label>
-
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(event) =>
-                  setEmail(
-                    event.target.value
-                  )
-                }
-                placeholder="you@example.com"
-                autoComplete="email"
-                className="w-full rounded-2xl border border-[#76523d]/15 bg-white/70 px-4 py-3.5 text-sm text-[#4f3425] outline-none transition placeholder:text-[#b4a092] focus:border-[#76523d]/40 focus:bg-white/90 focus:ring-4 focus:ring-[#76523d]/10"
-              />
-
-            </div>
-
-
-            <div>
-
-              <label className="mb-2 block text-[11px] font-semibold uppercase tracking-wide text-[#705444]">
-                Password
-              </label>
-
-              <div className="relative">
-
-                <input
-                  type={
-                    showPassword
-                      ? "text"
-                      : "password"
-                  }
-                  required
-                  value={password}
-                  onChange={(event) =>
-                    setPassword(
-                      event.target.value
-                    )
-                  }
-                  placeholder="Enter your password"
-                  autoComplete="current-password"
-                  className="w-full rounded-2xl border border-[#76523d]/15 bg-white/70 px-4 py-3.5 pr-12 text-sm text-[#4f3425] outline-none transition placeholder:text-[#b4a092] focus:border-[#76523d]/40 focus:bg-white/90 focus:ring-4 focus:ring-[#76523d]/10"
-                />
-
-                <button
-                  type="button"
-                  aria-label={
-                    showPassword
-                      ? "Hide password"
-                      : "Show password"
-                  }
-                  onClick={() =>
-                    setShowPassword(
-                      !showPassword
-                    )
-                  }
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-xl p-2 text-[#806858] transition hover:bg-[#60402d]/5 hover:text-[#4f3425]"
-                >
-                  {showPassword ? (
-                    <EyeOff size={17} />
-                  ) : (
-                    <Eye size={17} />
-                  )}
-                </button>
-
-              </div>
-
-            </div>
-
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="group flex w-full items-center justify-center gap-3 rounded-2xl bg-[#60402d] px-5 py-3.5 text-sm font-semibold text-white shadow-lg shadow-[#60402d]/20 transition duration-300 hover:-translate-y-0.5 hover:bg-[#503426] disabled:cursor-not-allowed disabled:opacity-60"
-            >
-
-              {loading
-                ? "Signing in..."
-                : "Continue"}
-
-              {!loading && (
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/10 transition-transform group-hover:translate-x-1">
-                  <ArrowRight size={14} />
-                </span>
-              )}
-
-            </button>
-
-          </form>
-
-
-          <div className="mt-6 border-t border-[#76523d]/10 pt-5 text-center">
-
-            <p className="text-sm text-[#806858]">
-
-              Don&apos;t have an account?{" "}
-
-              <Link
-                href="/register"
-                className="font-semibold text-[#60402d] transition hover:text-[#3f281c]"
-              >
-                Create one
-              </Link>
-
-            </p>
-
-          </div>
-
         </div>
-
-
-        <div className="mt-6 text-center">
-
-          <Link
-            href="/"
-            className="text-xs text-white/55 transition hover:text-white"
-          >
-            ← Back to Relay
-          </Link>
-
-        </div>
-
       </div>
-
-    </main>
+    </AppShell>
   );
 }
