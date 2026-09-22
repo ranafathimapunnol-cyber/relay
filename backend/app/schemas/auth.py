@@ -11,7 +11,7 @@ class UserLogin(BaseModel):
     email: EmailStr
     password: str
 
-
+# It defines what information your API sends back to the frontend.
 class UserResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

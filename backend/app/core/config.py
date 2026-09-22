@@ -1,6 +1,6 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-
+# SettingsConfigDict ->This is used to configure how BaseSettings should load the settings.
 class Settings(BaseSettings):
     DATABASE_URL: str
     SECRET_KEY: str
@@ -11,3 +11,10 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+
+# .env
+#  ↓
+# BaseSettings
+#  ↓
+# Settings
