@@ -1,13 +1,25 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from math import ceil
+
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    Query,
+    status
+)
+
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.dependencies.auth import get_current_user
+
 from app.models.project import Project
 from app.models.task import Task
 from app.models.user import User
+
 from app.schemas.task import (
     TaskCreate,
+    TaskPaginationResponse,
     TaskResponse,
     TaskUpdate
 )
@@ -18,6 +30,10 @@ router = APIRouter(
     tags=["Tasks"]
 )
 
+
+# ============================================================
+# CREATE TASK
+# ============================================================
 
 @router.post(
     "/",
@@ -47,7 +63,9 @@ def create_task(
     if data.assigned_to:
         assigned_user = (
             db.query(User)
-            .filter(User.id == data.assigned_to)
+            .filter(
+                User.id == data.assigned_to
+            )
             .first()
         )
 
@@ -74,49 +92,108 @@ def create_task(
     return task
 
 
-@router.get("/", response_model=list[TaskResponse])
+# ============================================================
+# GET TASKS - PAGINATED
+# ============================================================
+
+@router.get(
+    "/",
+    response_model=TaskPaginationResponse
+)
 def get_tasks(
     status_filter: str | None = Query(
         default=None,
         alias="status"
     ),
+
     priority: str | None = None,
+
     page: int = Query(
         default=1,
         ge=1
     ),
+
     limit: int = Query(
         default=10,
         ge=1,
         le=100
     ),
+
     db: Session = Depends(get_db),
+
     user: User = Depends(get_current_user)
 ):
+    # --------------------------------------------------------
+    # BASE QUERY
+    # --------------------------------------------------------
+
     query = (
         db.query(Task)
-        .filter(Task.created_by == user.id)
+        .filter(
+            Task.created_by == user.id
+        )
     )
+
+    # --------------------------------------------------------
+    # FILTER BY STATUS
+    # --------------------------------------------------------
 
     if status_filter:
         query = query.filter(
             Task.status == status_filter
         )
 
+    # --------------------------------------------------------
+    # FILTER BY PRIORITY
+    # --------------------------------------------------------
+
     if priority:
         query = query.filter(
             Task.priority == priority
         )
 
+    # --------------------------------------------------------
+    # TOTAL COUNT
+    # --------------------------------------------------------
+
+    total = query.count()
+
+    # --------------------------------------------------------
+    # PAGINATION
+    # --------------------------------------------------------
+
     offset = (page - 1) * limit
 
-    return (
+    tasks = (
         query
+        .order_by(Task.id.desc())
         .offset(offset)
         .limit(limit)
         .all()
     )
 
+    # --------------------------------------------------------
+    # TOTAL PAGES
+    # --------------------------------------------------------
+
+    pages = ceil(total / limit) if total > 0 else 1
+
+    # --------------------------------------------------------
+    # RESPONSE
+    # --------------------------------------------------------
+
+    return {
+        "items": tasks,
+        "total": total,
+        "page": page,
+        "limit": limit,
+        "pages": pages
+    }
+
+
+# ============================================================
+# GET SINGLE TASK
+# ============================================================
 
 @router.get(
     "/{task_id}",
@@ -124,7 +201,9 @@ def get_tasks(
 )
 def get_task(
     task_id: int,
+
     db: Session = Depends(get_db),
+
     user: User = Depends(get_current_user)
 ):
     task = (
@@ -145,14 +224,21 @@ def get_task(
     return task
 
 
+# ============================================================
+# UPDATE TASK
+# ============================================================
+
 @router.patch(
     "/{task_id}",
     response_model=TaskResponse
 )
 def update_task(
     task_id: int,
+
     data: TaskUpdate,
+
     db: Session = Depends(get_db),
+
     user: User = Depends(get_current_user)
 ):
     task = (
@@ -174,8 +260,14 @@ def update_task(
         exclude_unset=True
     )
 
+    # --------------------------------------------------------
+    # CHECK ASSIGNED USER
+    # --------------------------------------------------------
+
     if "assigned_to" in updates:
+
         if updates["assigned_to"] is not None:
+
             assigned_user = (
                 db.query(User)
                 .filter(
@@ -190,8 +282,16 @@ def update_task(
                     detail="Assigned user not found"
                 )
 
+    # --------------------------------------------------------
+    # APPLY UPDATES
+    # --------------------------------------------------------
+
     for field, value in updates.items():
-        setattr(task, field, value)
+        setattr(
+            task,
+            field,
+            value
+        )
 
     db.commit()
     db.refresh(task)
@@ -199,10 +299,18 @@ def update_task(
     return task
 
 
-@router.delete("/{task_id}")
+# ============================================================
+# DELETE TASK
+# ============================================================
+
+@router.delete(
+    "/{task_id}"
+)
 def delete_task(
     task_id: int,
+
     db: Session = Depends(get_db),
+
     user: User = Depends(get_current_user)
 ):
     task = (

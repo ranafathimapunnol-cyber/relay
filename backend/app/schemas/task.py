@@ -57,3 +57,11 @@ class TaskResponse(BaseModel):
 
     created_at: datetime
     updated_at: datetime
+
+
+class TaskPaginationResponse(BaseModel):
+    items: list[TaskResponse]
+    total: int
+    page: int
+    limit: int
+    pages: int
